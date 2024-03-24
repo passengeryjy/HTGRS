@@ -28,7 +28,7 @@ conda install pytorch==1.13.0 torchvision==0.14.0 torchaudio==0.13.0 pytorch-cud
 ## Project structure
 
 ```Python
-EBTSR
+HTGRS
  |-- dataset
  |    |-- cdr
  |    |    |-- train_filter.data
