@@ -20,7 +20,6 @@ def read_docred_con(file_in, tokenizer, max_seq_length=1024):
     features = []
     max_entity = 0
     maxlen = 0
-    #根据实体对数区分
     entity_number = []
     entity_1 =[]
     entity_2 = []
@@ -38,7 +37,7 @@ def read_docred_con(file_in, tokenizer, max_seq_length=1024):
         entities = sample['vertexSet']
         entity_start, entity_end = [], []
         mention_pos = []
-        ent_num = len(entities)     #实体数量
+        ent_num = len(entities)    
         men_num = 0
         for entity in entities:
             for mention in entity:
@@ -71,12 +70,9 @@ def read_docred_con(file_in, tokenizer, max_seq_length=1024):
 
 
         sentl_node = []
-        # 句子节点
         for l in range(len(sent_pos) - 1):
             sentl_node += [[l, l, l, l, l,l+ent_num+men_num, 2]]
         mention_pos = []
-
-        # 取处理后的句子token首尾位置
         sentl_pos = []
         for i in range(len(sent_pos) - 1):
             sentl_pos.append((sent_pos[i], sent_pos[i + 1]))
@@ -131,45 +127,26 @@ def read_docred_con(file_in, tokenizer, max_seq_length=1024):
         l_sid, r_sid = nodes[xv, 3], nodes[yv, 3]
 
         adj_temp = np.full((l_type.shape[0], r_type.shape[0]), 0,
-                           'i')  # adj_temp是一个临时的邻接矩阵，用来存储边的情况，
-        # adjacency = np.full((5, l_type.shape[0], r_type.shape[0]), 0.0) #adjacency是一个5维矩阵，其中adjacency[i]表示关系类型i（五类边）的邻接矩阵
-        adjacency = np.full((4, l_type.shape[0], r_type.shape[0]), 0.0)
-        # adjacency = np.full((3, l_type.shape[0], r_type.shape[0]), 0.0)
-
-        # mention-mention edge
-        # 左右节点类型都为1 且出现在相同句子，则进行连接
-        adj_temp = np.where((l_type == 1) & (r_type == 1) & (l_sid == r_sid), 1, adj_temp)
+                           'i')  
+            adjacency = np.full((4, l_type.shape[0], r_type.shape[0]), 0.0)
+               adj_temp = np.where((l_type == 1) & (r_type == 1) & (l_sid == r_sid), 1, adj_temp)
         adjacency[0] = np.where((l_type == 1) & (r_type == 1) & (l_sid == r_sid), 1, adjacency[0])
 
-        # mention-entity
         adj_temp = np.where((l_type == 0) & (r_type == 1) & (l_eid == r_eid), 1, adj_temp)
         adj_temp = np.where((l_type == 1) & (r_type == 0) & (l_eid == r_eid), 1, adj_temp)
         adjacency[1] = np.where((l_type == 0) & (r_type == 1) & (l_eid == r_eid), 1, adjacency[1])
         adjacency[1] = np.where((l_type == 1) & (r_type == 0) & (l_eid == r_eid), 1, adjacency[1])
 
-        # mention-sentl
         adj_temp = np.where((l_type == 1) & (r_type == 2) & (l_sid == r_sid), 1, adj_temp)
         adj_temp = np.where((l_type == 2) & (r_type == 1) & (l_sid == r_sid), 1, adj_temp)
         adjacency[2] = np.where((l_type == 1) & (r_type == 2) & (l_sid == r_sid), 1, adjacency[2])
         adjacency[2] = np.where((l_type == 2) & (r_type == 1) & (l_sid == r_sid), 1, adjacency[2])
-
-        # sentl-sentl
-        # adj_temp = np.where((l_type == 2) & (r_type == 2), 1, adj_temp)
-        # adjacency[3] = np.where((l_type == 2) & (r_type == 2), 1, adjacency[3])
-
-        # 按顺序相连
         adj_temp = np.where((l_type == 2) & (r_type == 2) & (l_sid + 1 == r_sid), 1, adj_temp)
         adjacency[3] = np.where((l_type == 2) & (r_type == 2) & (l_sid + 1 == r_sid), 1,adjacency[3])
 
         # adjacency = sparse_mxs_to_torch_sparse_tensor([sp.coo_matrix(adjacency[i]) for i in range(5)])
         adjacency = sparse_mxs_to_torch_sparse_tensor([sp.coo_matrix(adjacency[i]) for i in range(4)])
 
-        '''
-            根据路径选择子图节点，并构建其邻接矩阵
-            new_ent_node = []
-            new_men_node = []
-            new_sen_node = []
-        '''
         #path分为：e-m-s-m-e; e-m-s-s-m-e; e-m-s-m-e-m-s-m-e
         # new_ent_id = []
         # new_men_id = []
@@ -239,29 +216,21 @@ def read_docred_con(file_in, tokenizer, max_seq_length=1024):
         # new_adj_temp = np.full((new_l_type.shape[0], new_r_type.shape[0]), 0,'i')  # adj_temp是一个临时的邻接矩阵，用来存储边的情况，
         #
         # new_adjacency = np.full((4, new_l_type.shape[0], new_r_type.shape[0]), 0.0)
-        #
-        # # mention-mention edge
-        # # 左右节点类型都为1 且出现在相同句子，则进行连接
         # new_adj_temp = np.where((new_l_type == 1) & (new_r_type == 1) & (new_l_sid == new_r_sid), 1, new_adj_temp)
         # new_adjacency[0] = np.where((new_l_type == 1) & (new_r_type == 1) & (new_l_sid == new_r_sid), 1, new_adjacency[0])
-        #
-        # # mention-entity
         # new_adj_temp = np.where((new_l_type == 0) & (new_r_type == 1) & (new_l_eid == new_r_eid), 1, new_adj_temp)
         # new_adj_temp = np.where((new_l_type == 1) & (new_r_type == 0) & (new_l_eid == new_r_eid), 1, new_adj_temp)
         # new_adjacency[1] = np.where((new_l_type == 0) & (new_r_type == 1) & (new_l_eid == new_r_eid), 1, new_adjacency[1])
         # new_adjacency[1] = np.where((new_l_type == 1) & (new_r_type == 0) & (new_l_eid == new_r_eid), 1, new_adjacency[1])
         #
-        # # mention-sentl
         # new_adj_temp = np.where((new_l_type == 1) & (new_r_type == 2) & (new_l_sid == new_r_sid), 1, new_adj_temp)
         # new_adj_temp = np.where((new_l_type == 2) & (new_r_type == 1) & (new_l_sid == new_r_sid), 1, new_adj_temp)
         # new_adjacency[2] = np.where((new_l_type == 1) & (new_r_type == 2) & (new_l_sid == new_r_sid), 1, new_adjacency[2])
         # new_adjacency[2] = np.where((new_l_type == 2) & (new_r_type == 1) & (new_l_sid == new_r_sid), 1, new_adjacency[2])
         #
-        # # sentl-sentl
         # # adj_temp = np.where((l_type == 2) & (r_type == 2), 1, adj_temp)
         # # adjacency[3] = np.where((l_type == 2) & (r_type == 2), 1, adjacency[3])
         #
-        # # 按顺序相连
         # new_adj_temp = np.where((new_l_type == 2) & (new_r_type == 2) & (new_l_sid + 1 == new_r_sid), 1, new_adj_temp)
         # new_adjacency[3] = np.where((new_l_type == 2) & (new_r_type == 2) & (new_l_sid + 1 == new_r_sid), 1, new_adjacency[3])
         #
