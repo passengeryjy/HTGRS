@@ -26,7 +26,7 @@ conda install pytorch==1.13.0 torchvision==0.14.0 torchaudio==0.13.0 pytorch-cud
 | BioRED  |   https://github.com/ncbi/BioRED   |
 
 ## Project structure
-
+If you want to reproduction this project, you should make the project sturcture like this.
 ```Python
 HTGRS
  |-- dataset
