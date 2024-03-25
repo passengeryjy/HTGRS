@@ -68,3 +68,22 @@ HTGRS
 ```
  #You can get the encoder you need from https://huggingface.co, such as https://huggingface.co/allenai/scibert_scivocab_cased
 
+## Reproduction
+
+Before you train the model, you should convert the corresponding dataset into the structure acceptable to our model.
+
+- if you want to train the model after obtaining the features that model can accpet, you should set the arguments  "--save_path" to save your checkpoints. Then, you can use this command to train your model:
+
+```Python
+python run_*.py 
+#like python run_cdr.py
+```
+
+
+
+- Evaluate the model on test set through setting the argument "--load_path" to your trained model:
+
+```Python
+python run_*.py
+```
+
