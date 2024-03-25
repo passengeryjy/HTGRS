@@ -17,7 +17,7 @@ from adj_utils import convert_3dsparse_to_4dsparse
 from time import time                           
 
 
-def train(args, model, train_features, dev_features, test_features):
+def train(args, model, train_features, dev_features):
     def finetune(features, optimizer, num_epoch, num_steps):
         best_score = -1
         train_dataloader = DataLoader(features, batch_size=args.train_batch_size, shuffle=True, collate_fn=collate_fn, drop_last=True)
@@ -57,11 +57,9 @@ def train(args, model, train_features, dev_features, test_features):
                     num_steps += 1
                 if (step + 1) == len(train_dataloader) - 1 or (args.evaluation_steps > 0 and num_steps % args.evaluation_steps == 0 and step % args.gradient_accumulation_steps == 0):
                     dev_score, dev_output = evaluate(args, model, dev_features, tag="dev")
-                    test_score, test_output = evaluate(args, model, test_features, tag="test")
                     t2 = time()                
                     print(f'epoch:{epoch}, time:{humanized_time(t2-t1)}, loss:{loss}')
                     print(dev_output)
-                    print(test_output)
                     if dev_score > best_score:
                         best_score = dev_score
                         if args.save_path != "":
@@ -69,11 +67,10 @@ def train(args, model, train_features, dev_features, test_features):
                             with open('./saved_model/GDA/log_gda.txt', 'a') as f:
                                 f.writelines(f'epoch:{epoch}\n')
                                 f.writelines(f'{dev_output}\n')
-                                f.writelines(f'{test_output}\n')
                                 f.writelines('\n')
 
         return num_steps
-    new_layer = ["extractor", "bilinear", "Linear", "gcn", "reason", "fusion"]           
+    new_layer = ["extractor", "bilinear", "Linear", "gcn", "reason"]           
     optimizer_grouped_parameters = [
         {"params": [p for n, p in model.named_parameters() if not any(nd in n for nd in new_layer)], },
         {"params": [p for n, p in model.named_parameters() if any(nd in n for nd in new_layer)], "lr": 1e-4},           
@@ -155,14 +152,14 @@ def humanized_time(second):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--data_dir", default="./dataset/convert_gda", type=str)
+    parser.add_argument("--data_dir", default="./dataset/gda", type=str)
     parser.add_argument("--transformer_type", default="bert", type=str)
     
-    parser.add_argument("--model_name_or_path", default="./biobert_base", type=str)
+    parser.add_argument("--model_name_or_path", default="", type=str)
     
-    parser.add_argument("--train_file", default="convert_train.json", type=str)
-    parser.add_argument("--dev_file", default="convert_dev.json", type=str)
-    parser.add_argument("--test_file", default="convert_test.json", type=str)
+    parser.add_argument("--train_file", default="", type=str)
+    parser.add_argument("--dev_file", default="", type=str)
+    parser.add_argument("--test_file", default="", type=str)
     parser.add_argument("--save_path", default="./saved_model/GDA/best_gda.model", type=str)
     parser.add_argument("--load_path", default="", type=str)
 
@@ -234,7 +231,7 @@ def main():
     model.to(args.device)
 
     if args.load_path == "":
-        train(args, model, train_features, dev_features, test_features)
+        train(args, model, train_features, dev_features)
     else:
         model.load_state_dict(torch.load(args.load_path))
         dev_score, dev_output = evaluate(args, model, dev_features, tag="dev")
