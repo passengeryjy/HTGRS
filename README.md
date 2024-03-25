@@ -66,5 +66,5 @@ HTGRS
  |    |-- rgcn.py
  |    |-- model.py
 ```
-
+ #You can get the encoder you need from https://huggingface.co, such as https://huggingface.co/allenai/scibert_scivocab_cased
 
