@@ -89,4 +89,4 @@ python run_*.py
 
 ## Acknowledgement
 
-We refer to the paper ["U-Net: Convolutional Networks for Biomedical Image Segmentation"](https://link.springer.com/chapter/10.1007/978-3-319-24574-4_28) Thanks for their contributions.
+We refer to the paper ["U-Net: Convolutional Networks for Biomedical Image Segmentation"](https://link.springer.com/chapter/10.1007/978-3-319-24574-4_28) and "[CCNet: Criss-Cross Attention for Semantic Segmentation](https://openaccess.thecvf.com/content_ICCV_2019/html/Huang_CCNet_Criss-Cross_Attention_for_Semantic_Segmentation_ICCV_2019_paper.html?ref=https://githubhelp.com)". Thanks for their contributions.
