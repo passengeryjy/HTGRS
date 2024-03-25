@@ -89,4 +89,4 @@ python run_*.py
 
 ## Acknowledgement
 
-We refer to the paper ["U-Net: Convolutional Networks for Biomedical Image Segmentation"](https://link.springer.com/chapter/10.1007/978-3-319-24574-4_28)
+We refer to the paper ["U-Net: Convolutional Networks for Biomedical Image Segmentation"](https://link.springer.com/chapter/10.1007/978-3-319-24574-4_28) Thanks for their contributions.
