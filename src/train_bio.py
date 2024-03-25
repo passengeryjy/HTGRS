@@ -59,19 +59,16 @@ def train(args, model, train_features, dev_features, test_features):
                 if (step + 1) == len(train_dataloader) - 1 or (
                         args.evaluation_steps > 0 and num_steps % args.evaluation_steps == 0 and step % args.gradient_accumulation_steps == 0):
                     dev_score, dev_output = evaluate(args, model, dev_features, tag="dev")
-                    test_score, test_output = evaluate(args, model, test_features, tag="test")
                     t2 = time()
                     print(f'epoch:{epoch}, time:{humanized_time(t2 - t1)}, loss:{loss}\n')
                     print(dev_output)
-                    print(test_output)
-                    if test_score > best_score:
-                        best_score = test_score
+                    if dev_score > best_score:
+                        best_score = dev_score
                         if args.save_path != "":
                             torch.save(model.state_dict(), args.save_path)
-                            with open('./saved_model/biored_noRSM/log_2.txt', 'a') as f:
+                            with open('./saved_model/biored/log_2.txt', 'a') as f:
                                 f.writelines(f'epoch:{epoch}\n')
                                 f.writelines(f'{dev_output}\n')
-                                f.writelines(f'{test_output}\n')
                                 f.writelines('\n')
 
         return num_steps
@@ -191,14 +188,14 @@ def humanized_time(second):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--data_dir", default="./dataset/biored/divide", type=str)
+    parser.add_argument("--data_dir", default="./dataset/biored", type=str)
     parser.add_argument("--transformer_type", default="bert", type=str)
-    parser.add_argument("--model_name_or_path", default="./biobert_base", type=str)
-    parser.add_argument("--train_file", default="Train.BioC_modified_end.JSON", type=str)
-    parser.add_argument("--dev_file", default="case.json", type=str)
-    parser.add_argument("--test_file", default="Test.BioC_modified.JSON", type=str)
-    parser.add_argument("--save_path", default="./saved_model/biored/best.model", type=str)
-    parser.add_argument("--load_path", default="./saved_model/biored/best.model", type=str)
+    parser.add_argument("--model_name_or_path", default="", type=str)
+    parser.add_argument("--train_file", default="", type=str)
+    parser.add_argument("--dev_file", default="", type=str)
+    parser.add_argument("--test_file", default="", type=str)
+    parser.add_argument("--save_path", default="", type=str)
+    parser.add_argument("--load_path", default="", type=str)
 
     parser.add_argument("--config_name", default="", type=str,
                         help="Pretrained config name or path if not the same as model_name")
@@ -253,12 +250,12 @@ def main():
     # read = read_cdr if "cdr" in args.data_dir else read_gda
     read = read_biored
 
-    # train_file = os.path.join(args.data_dir, args.train_file)
+    train_file = os.path.join(args.data_dir, args.train_file)
     dev_file = os.path.join(args.data_dir, args.dev_file)
-    # test_file = os.path.join(args.data_dir, args.test_file)
-    # train_features = read(train_file, tokenizer, max_seq_length=args.max_seq_length)
+    test_file = os.path.join(args.data_dir, args.test_file)
+    train_features = read(train_file, tokenizer, max_seq_length=args.max_seq_length)
     dev_features = read(dev_file, tokenizer, max_seq_length=args.max_seq_length)
-    # test_features = read(test_file, tokenizer, max_seq_length=args.max_seq_length)
+    test_features = read(test_file, tokenizer, max_seq_length=args.max_seq_length)
 
     model = AutoModel.from_pretrained(
         args.model_name_or_path,
@@ -283,10 +280,10 @@ def main():
         model.load_state_dict(torch.load(args.load_path))
         dev_score, dev_output = evaluate(args, model, dev_features, tag="dev")
         #index = evaluate(args, model, dev_features, tag="dev")
-        # test_score, test_output = evaluate(args, model, test_features, tag="test")
+        test_score, test_output = evaluate(args, model, test_features, tag="test")
         print(dev_output)
         #print(index)
-        # print(test_output)
+        print(test_output)
 
 
 if __name__ == "__main__":
