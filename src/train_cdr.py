@@ -66,7 +66,7 @@ def train(args, model, train_features, dev_features, test_features):
                         best_score = dev_score
                         if args.save_path != "":
                             torch.save(model.state_dict(), args.save_path)
-                            with open('./saved_model/CDR_noRSM/log.txt', 'a') as f:
+                            with open('./saved_model/CDR/log.txt', 'a') as f:
                                 f.writelines(f'epoch:{epoch}\n')
                                 f.writelines(f'{dev_output}\n')
                                 f.writelines('\n')
