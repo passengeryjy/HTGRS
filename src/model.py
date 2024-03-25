@@ -9,7 +9,6 @@ from utils import EmbedLayer
 from torch.nn import Softmax
 
 
-# 十字交叉注意力
 def INF(B, H, W):
     return -torch.diag(torch.tensor(float("inf")).cuda(0).repeat(H), 0).unsqueeze(0).repeat(B * W, 1, 1)
 
@@ -115,12 +114,11 @@ class DocREModel(nn.Module):
         entity_node_batch = []
         mention_pos_batch = []
         mention_att_batch = []
-        for i in range(len(entity_pos)):    #遍历一个batch_size中样本数，
+        for i in range(len(entity_pos)):    
             entity_nodes, mention_nodes, link_nodes = [], [], []
             entity_att = []
             mention_att = []
             mention_pos = []
-            #取句子嵌入
             for start, end in link_pos[i]:
                 if end + offset < c:
                     link_rep = sequence_output[i, start + offset: end + offset]
@@ -135,16 +133,14 @@ class DocREModel(nn.Module):
                 else:
                     link_rep = torch.zeros(self.hidden_size).to(sequence_output)
                 link_nodes.append(link_rep)
-            #取实体嵌入
             for e in entity_pos[i]:
                 mention_pos.append(len(mention_att))
                 if len(e) > 1:
                     m_emb, e_att = [], []
-                    #遍历每个实体的所有提及
                     for start, end, e_id, sid, mid, nid in e:
                     #for start, end, e_id, h_lid, t_lid, sid in e:
                         if start + offset < c:
-                            mention_nodes.append(sequence_output[i, start + offset])    #提及结点rep
+                            mention_nodes.append(sequence_output[i, start + offset])    
                             m_emb.append(sequence_output[i, start + offset])
                             e_att.append(attention[i, :, start + offset])
                             mention_att.append(attention[i, :, start + offset])
@@ -154,8 +150,8 @@ class DocREModel(nn.Module):
                             e_att.append(torch.zeros(h, c).to(attention))
                             mention_att.append(torch.zeros(h, c).to(attention))
                     if len(m_emb) > 0:
-                        m_emb = torch.logsumexp(torch.stack(m_emb, dim=0), dim=0)   #得到实体嵌入，
-                        e_att = torch.stack(e_att, dim=0).mean(0)   #实体注意力，这个张量表示了所有实体的平均注意力分布
+                        m_emb = torch.logsumexp(torch.stack(m_emb, dim=0), dim=0) 
+                        e_att = torch.stack(e_att, dim=0).mean(0)   
                     else:
                         m_emb = torch.zeros(self.hidden_size).to(sequence_output)
                         e_att = torch.zeros(h, c).to(attention)
@@ -171,32 +167,32 @@ class DocREModel(nn.Module):
                         m_emb = torch.zeros(self.hidden_size).to(sequence_output)
                         e_att = torch.zeros(h, c).to(attention)
                         mention_att.append(torch.zeros(h, c).to(attention))
-                entity_nodes.append(m_emb)  #实体结点
-                entity_att.append(e_att)    #实体注意力
+                entity_nodes.append(m_emb) 
+                entity_att.append(e_att)    
             mention_pos.append(len(mention_att))
             entity_att = torch.stack(entity_att, dim=0)
             entity_att_batch.append(entity_att) ###
             entity_nodes = torch.stack(entity_nodes, dim=0)
-            mention_nodes = torch.stack(mention_nodes, dim=0)   #提及结点
+            mention_nodes = torch.stack(mention_nodes, dim=0)
             mention_att = torch.stack(mention_att, dim=0)
             link_nodes = torch.stack(link_nodes, dim=0)
             nodes = torch.cat([entity_nodes, mention_nodes, link_nodes], dim=0)
             #print("node:", nodes.shape)
             nodes_type = self.type_embed(nodes_info[i][:, 6].to(sequence_output.device))
-            nodes = torch.cat([nodes, nodes_type], dim=1)   #将节点与类型拼接
-            nodes_batch.append(nodes)   ###
+            nodes = torch.cat([nodes, nodes_type], dim=1)  
+            nodes_batch.append(nodes) 
             #print(nodes.shape)
-            entity_node_batch.append(entity_nodes)  ###
-            mention_att_batch.append(mention_att)   ###
-            mention_pos_batch.append(mention_pos)   ###
-        nodes_batch = pad_sequence(nodes_batch, batch_first=True, padding_value=0.0)    #nodes_batch是一个列表，包含了多个tensor，每个tensor表示一个图节点的特征，这些节点的特征需要进行padding
+            entity_node_batch.append(entity_nodes) 
+            mention_att_batch.append(mention_att)  
+            mention_pos_batch.append(mention_pos)  
+        nodes_batch = pad_sequence(nodes_batch, batch_first=True, padding_value=0.0)    
         return nodes_batch, entity_att_batch, entity_node_batch, mention_att_batch, mention_pos_batch
 
     def relation_map(self, gcn_nodes, entity_att, entity_pos, sequence_output, mention_att):
         entity_s, mention_s = [], []
         entity_c, mention_c = [], []
-        ec_rep = [] #存放Ec
-        nodes = gcn_nodes[-1]   #最后一层节点输出
+        ec_rep = [] 
+        nodes = gcn_nodes[-1]  
         m_num_max = 0
         e_num_max = 0
         for i in range(len(entity_pos)):
@@ -206,40 +202,37 @@ class DocREModel(nn.Module):
             e_num_max = e_num if e_num > e_num_max else e_num_max
         for i in range(len(entity_pos)):
             e_num = len(entity_pos[i])
-            entity_stru = nodes[i][: e_num] #得到Es，第i篇文档中的所有实体嵌入，nodes结构为ent_num+m_num+sen_num
+            entity_stru = nodes[i][: e_num] 
             m_num, head_num, dim = mention_att[i].size()
-            mention_stru = nodes[i][e_num: e_num+m_num] #得到Ms
-            #CIE模块
+            mention_stru = nodes[i][e_num: e_num+m_num] 
             e_att = entity_att[i].mean(1)
             e_att = e_att / (e_att.sum(1, keepdim=True) + 1e-5)
-            e_context = torch.einsum('ij, jl->il', e_att, sequence_output[i])   #Ec
-
+            e_context = torch.einsum('ij, jl->il', e_att, sequence_output[i])  
             m_att = mention_att[i].mean(1)
-            m_att = m_att / (m_att.sum(1, keepdim=True) + 1e-5) #
-            m_context = torch.einsum('ij,jl->il', m_att, sequence_output[i])    #Mc
+            m_att = m_att / (m_att.sum(1, keepdim=True) + 1e-5) 
+            m_context = torch.einsum('ij,jl->il', m_att, sequence_output[i])  
             # print(entity_stru.size())
-            n, h = entity_stru.size()   #分别为实体数量，实体嵌入维度为d_hid=d_emb
+            n, h = entity_stru.size()   
             e_s = torch.zeros([e_num_max, h]).to(sequence_output)
             e_s[:n] = entity_stru
-            e_s_map = torch.einsum('ij, jk->jik', e_s, e_s.t()) #论文中公式11    Es*Es转置
+            e_s_map = torch.einsum('ij, jk->jik', e_s, e_s.t()) 
             entity_s.append(e_s_map)
             m, h = mention_stru.size()
             m_s = torch.zeros([m_num_max, h]).to(sequence_output)
             m_s[:m] = mention_stru
-            m_s_map = torch.einsum('ij,jk->jik', m_s, m_s.t())  #论文中公式10    Ms*Ms转置
+            m_s_map = torch.einsum('ij,jk->jik', m_s, m_s.t())  
             mention_s.append(m_s_map)
             n, h_2 = e_context.size()
             e_c = torch.zeros([e_num_max, h_2]).to(sequence_output)
             e_c[:n] = e_context
             ec_rep.append(e_c)
-            e_c_map = torch.einsum('ij, jk->jik', e_c, e_c.t()) #论文中公式9,Ec*Ec转置
+            e_c_map = torch.einsum('ij, jk->jik', e_c, e_c.t()) 
             entity_c.append(e_c_map)
-            m, h = m_context.size() #m和h分别为提及数和每个提及上下文向量大小demb
-            m_c = torch.zeros([m_num_max, h]).to(sequence_output)   #创建一个形状为(m_num_max, h)的0张量m_c，其中m_num_max是所有mentions中最大的mention数量
-            m_c[:m] = m_context #将之前得到的m_context复制到m_c的前m行
-            m_c_map = torch.einsum('ij,jk->jik', m_c, m_c.t())  #论文中公式8 ， Mc*Mc转置，
+            m, h = m_context.size() 
+            m_c = torch.zeros([m_num_max, h]).to(sequence_output)   
+            m_c[:m] = m_context
+            m_c_map = torch.einsum('ij,jk->jik', m_c, m_c.t())  
             mention_c.append(m_c_map)
-        #经处理后得到的特征，
         ec_rep = torch.stack(ec_rep, dim=0)
         entity_c = torch.stack(entity_c, dim=0)
         entity_s = torch.stack(entity_s, dim=0)
@@ -268,101 +261,57 @@ class DocREModel(nn.Module):
         # print("labels:", len(labels[0]), len(labels[1]))
         nodes, entity_att, entity_node_batch, mention_att, mentions_pos = self.make_graph(sequence_output, attention, entity_pos, link_pos, nodes_info)
         gcn_nodes = self.rgcn(nodes, adjacency)
-
-        '''
-        entity_c, entity_s, mention_c, mention_s, ec_rep = self.relation_map(gcn_nodes, entity_node_batch, entity_att, entity_pos, sequence_output, mention_att)    #MDIF
-        feature_e = self.fusion_feature_e(entity_s, entity_c)   #MDIF模块中得到Esc
-        #feature_m = self.fusion_feature_m(mention_s, mention_c) #得到Msc  #(bs, emb_size, num_ents, num_ents)
-        r_rep_e = self.conv_reason_e_l1(feature_e)
-        r_rep_e = self.conv_reason_e_l2(r_rep_e)    #Ers,结构为demb*Ne*Ne，(num_rels, hidden_size, num_ents, num_ents)
-        #r_rep_m = self.conv_reason_m_l1(feature_m)
-        #r_rep_m = self.conv_reason_m_l2(r_rep_m)    #Mrs
-        '''
-
-        #子图/原图构造map，送入CNN
         entity_c, entity_s, mention_c, mention_s, ec_rep = self.relation_map(gcn_nodes, entity_att, entity_pos, sequence_output, mention_att)
-        #关系分割模块
+        #relation segementation
         r_rep_e = self.conv_reason_e_l1(entity_s) #[batch_size, inter_channel, ent_num, ent_num]
         cc_output = self.cc_module(r_rep_e)
         r_rep_e_2 = self.conv_reason_e_l2(cc_output)
         cc_output_2 = self.cc_module(r_rep_e_2)
         r_rep_e_3 = self.conv_reason_e_l3(cc_output_2)
         # cc_output_3 = self.cc_module(r_rep_e_3)
-
-
-        #分类层，要获得relation的rep
         relation = []
         entity_h = []
         entity_t = []
-
-        #Ec中取得头尾实体
         eh = []
         et = []
         e_tou = []
         e_wei = []
-
         sc_feature_e = []
         nodes_re = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
         #print("nodes_re:", nodes_re.shape)
-
-        for i in range(len(entity_pos)):    #遍历每一篇文章
+        for i in range(len(entity_pos)):    
             #print("hts:", hts[i])
-            ht_i = torch.LongTensor(hts[i]).to(sequence_output.device) #将将列表转换为一个长整型的张量，
+            ht_i = torch.LongTensor(hts[i]).to(sequence_output.device) 
             # print("ht_i:", ht_i)
-            #r_v1 = r_rep_e[i, :, ht_i[:, 0], ht_i[:, 1]].transpose(1, 0)   #得到在Ers中的实体关系推理表示 #其中ht_i[:, 0], ht_i[:, 1]表示当前样本中所有实体对的头尾实体索引，这个关系表示矩阵转置成形状为(num_pairs, hidden_size)的关系向量
+            #r_v1 = r_rep_e[i, :, ht_i[:, 0], ht_i[:, 1]].transpose(1, 0)   
             r_v1 = r_rep_e_3[i, :, ht_i[:, 0],ht_i[:, 1]].transpose(1, 0)
-            relation.append(r_v1)    #R  rrs,    对于头尾实体按维度1进行拼接，得到relation形状，numeht*(emb_size*2)
-
-            #取Es中的头尾实体表示
-            e_h = torch.index_select(nodes_re[i], 0, ht_i[:, 0])    #取所有实体对的头实体
-            e_t = torch.index_select(nodes_re[i], 0, ht_i[:, 1])    #取所有尾实体
+            relation.append(r_v1)   
+            e_h = torch.index_select(nodes_re[i], 0, ht_i[:, 0])   
+            e_t = torch.index_select(nodes_re[i], 0, ht_i[:, 1])    
             # print("e_h:", e_h.shape)
             # print("e_t:", e_t.shape)
             entity_h.append(e_h)
             entity_t.append(e_t)
-
-            #从Ec中获取ht_rep
             eh = torch.index_select(ec_rep[i], 0, ht_i[:, 0])
             et = torch.index_select(ec_rep[i], 0, ht_i[:, 1])
             e_tou.append(eh)
             e_wei.append(et)
-
         relation = torch.cat(relation, dim=0)
-        #取Es中的实体对表示
         entity_h = torch.cat(entity_h, dim=0)
         entity_t = torch.cat(entity_t, dim=0)
         # print("entity_h:", entity_h.shape)
         # print("entity_t:", entity_t.shape)
-        entity_ht = self.ht_extractor(torch.cat([entity_h, entity_t], dim=-1))  #rht，来自Es的,得到实体对    emb_size*4 -> emb_size*2
+        entity_ht = self.ht_extractor(torch.cat([entity_h, entity_t], dim=-1)) 
         # print("entity_ht:", entity_ht.shape)
-        #GCN层数为1时，取头尾实体表示
-        #entity_ht = torch.cat([entity_h, entity_t], dim=-1)
-
-        #取Ec中的实体对表示
         e_tou = torch.cat(e_tou, dim=0)
         e_wei = torch.cat(e_wei, dim=0)
         e_tw = torch.cat([e_tou, e_wei], dim=-1)
-
-        #relation_rep = self.MIP_Linear(torch.cat([entity_ht, e_tw, sc_feature_e, new_entity_ht], dim=-1))   #emb_size * 7 -> emb_size * 5
-        # relation_rep = self.MIP_Linear(torch.cat([relation, sc_feature_e, entity_ht, new_entity_ht], dim=-1))  #emb_size * 6 -> emb_size * 5
-        #完全体
         relation_rep = torch.cat([relation, e_tw, entity_ht], dim=-1)
-        #没有矩阵
-        #relation_rep = torch.cat([e_tw, entity_ht],dim=-1)
-
-        relation_rep = self.MIP_Linear1(relation_rep)   #emb_size * 5 -> emb_size * 4
+        relation_rep = self.MIP_Linear1(relation_rep)  
         relation_rep = torch.tanh(self.MIP_Linear2(relation_rep))
         logits = self.bilinear(relation_rep)
         # logits = self.bilinear(torch.tanh(enhanced_features))
         output = (self.loss_fnt.get_label(logits, num_labels=self.num_labels),)
-
-        '''
-        relation_rep = self.MIP_Linear(torch.cat([relation, sc_feature_e, entity_ht], dim=-1))  #r = [rrs;rht;rf],  三者最后一个维度分别为
-        relation_rep = torch.tanh(self.MIP_Linear2(relation_rep))   #r先过一层线性，再激活函数tanH,
-        logits = self.bilinear(relation_rep)
-        output = (self.loss_fnt.get_label(logits, num_labels=self.num_labels),)
-        '''
-
         if labels is not None:
             labels = [torch.tensor(label) for label in labels]
             labels = torch.cat(labels, dim=0).to(logits)
