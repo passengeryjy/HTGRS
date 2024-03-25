@@ -18,7 +18,7 @@ from time import time
 np.set_printoptions(threshold = np.inf)
 
 
-def train(args, model, train_features, dev_features, test_features):
+def train(args, model, train_features, dev_features):
     def finetune(features, optimizer, num_epoch, num_steps):
         best_score = -1
         train_dataloader = DataLoader(features, batch_size=args.train_batch_size, shuffle=True, collate_fn=collate_fn,
@@ -273,8 +273,7 @@ def main():
     model.to(args.device)
 
     if args.load_path == "":
-        train(args, model, train_features, dev_features, test_features)
-        # train(args, model, train_features, test_features)
+        train(args, model, train_features, dev_features)
     else:
         # model = amp.initialize(model, opt_level="O1", verbosity=0)
         model.load_state_dict(torch.load(args.load_path))
