@@ -1,6 +1,7 @@
 # HTGRS
 Code for "Document-level biomedical relation extraction via hierarchical tree graph and relation segmentation module"
-
+The file **Supplementary data for.pdf** provides additional experimental data for the Discussion section, which is specifically divided into 
+Impact of hierarchical concept in document graph, Effectiveness analysis of three stage decoupling and Case study.
 
 ## Requisites
 
