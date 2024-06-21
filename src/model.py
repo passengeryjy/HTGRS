@@ -282,8 +282,7 @@ class DocREModel(nn.Module):
         for i in range(len(entity_pos)):    
             #print("hts:", hts[i])
             ht_i = torch.LongTensor(hts[i]).to(sequence_output.device) 
-            # print("ht_i:", ht_i)
-            #r_v1 = r_rep_e[i, :, ht_i[:, 0], ht_i[:, 1]].transpose(1, 0)   
+            # print("ht_i:", ht_i)  
             r_v1 = r_rep_e_3[i, :, ht_i[:, 0],ht_i[:, 1]].transpose(1, 0)
             relation.append(r_v1)   
             e_h = torch.index_select(nodes_re[i], 0, ht_i[:, 0])   
