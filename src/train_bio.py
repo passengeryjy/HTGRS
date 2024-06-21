@@ -91,7 +91,6 @@ def evaluate(args, model, features, tag="dev"):
     dataloader = DataLoader(features, batch_size=args.test_batch_size, shuffle=False, collate_fn=collate_fn,
                             drop_last=False)
     preds, golds, dists = [], [], []
-    # preds_f, gplds_f, del1, del2=[], [], [], []
     for batch in dataloader:
         model.eval()
         adjacency = convert_3dsparse_to_4dsparse(batch[5]).to(args.device)
@@ -114,65 +113,67 @@ def evaluate(args, model, features, tag="dev"):
 
     preds = np.concatenate(preds, axis=0).astype(np.int32)
     golds = np.concatenate(golds, axis=0).astype(np.int32)
-    #dists = np.concatenate(dists, axis=0).astype(np.float32)
-    # print("preds：",preds.size)
-    # print(preds)
-    # print("golds",golds.size)
-    assert len(preds) == len(golds)
-    # for i in range(len(preds)):
-    #     if preds[i][0] == 1:
-    #         # print(preds[i])
-    #         del1.append(i)
-    #     else:
-    #         continue
-    # preds_f= np.delete(preds, del1, axis=0)
-    # print("predsf：", preds_f.size)
-    # for j in range(len(golds)):
-    #     if golds[j][0] == 1:
-    #         del2.append(j)
-    #     else:
-    #         continue
-    # golds_f = np.delete(preds, del2, axis=0)
-    # print("golds_f：", golds_f.size)
-    # assert len(preds_f) == len(golds_f)
-    tp = ((preds[:, 1] == 1) & (golds[:, 1] == 1)).astype(np.float32).sum()  # 预测正确的
-    tn = ((golds[:, 1] == 1) & (preds[:, 1] != 1)).astype(np.float32).sum()  # 正确但是预测错误的
-    fp = ((preds[:, 1] == 1) & (golds[:, 1] != 1)).astype(np.float32).sum()  # 错误但是预测正确的
     '''
-    映射关系类型
+    将preds转化为具体标签
     '''
-    print("preds:",preds)
-    print("golds:",golds)
-    # tp = ((preds_f[:, 1] == 1) & (golds_f[:, 1] == 1)).astype(np.int32).sum()  # 预测正确的
-    # tn = ((golds_f[:, 1] == 1) & (preds_f[:, 1] != 1)).astype(np.int32).sum()  # 正确但是预测错误的
-    # fp = ((preds_f[:, 1] == 1) & (golds_f[:, 1] != 1)).astype(np.int32).sum()  # 错误但是预测正确的
-    precision = tp / (tp + fp + 1e-5)
-    recall = tp / (tp + tn + 1e-5)
-    f1 = 2 * precision * recall / (precision + recall + 1e-5)
-
-    # tp_intra = ((preds[:, 1] == 1) & (golds[:, 1] == 1) & (dists == 0)).astype(np.float32).sum()
-    # tn_intra = ((golds[:, 1] == 1) & (preds[:, 1] != 1) & (dists == 0)).astype(np.float32).sum()
-    # fp_intra = ((preds[:, 1] == 1) & (golds[:, 1] != 1) & (dists == 0)).astype(np.float32).sum()
-    # precision_intra = tp_intra / (tp_intra + fp_intra + 1e-5)
-    # recall_intra = tp_intra / (tp_intra + tn_intra + 1e-5)
-    # f1_intra = 2 * precision_intra * recall_intra / (precision_intra + recall_intra + 1e-5)
-    #
-    # tp_inter = ((preds[:, 1] == 1) & (golds[:, 1] == 1) & (dists == 1)).astype(np.float32).sum()
-    # tn_inter = ((golds[:, 1] == 1) & (preds[:, 1] != 1) & (dists == 1)).astype(np.float32).sum()
-    # fp_inter = ((preds[:, 1] == 1) & (golds[:, 1] != 1) & (dists == 1)).astype(np.float32).sum()
-    # precision_inter = tp_inter / (tp_inter + fp_inter + 1e-5)
-    # recall_inter = tp_inter / (tp_inter + tn_inter + 1e-5)
-    # f1_inter = 2 * precision_inter * recall_inter / (precision_inter + recall_inter + 1e-5)
-
+    h_idx, t_idx, title = [], [], []
+    
+    for f in features:
+        hts = f["hts"]
+        h_idx += [ht[0] for ht in hts]
+        t_idx += [ht[1] for ht in hts]
+        title += [f["title"] for ht in hts]
+    
+    res = []
+    for i in range(preds.shape[0]):
+        pred = preds[i]
+        pred = np.nonzero(pred)[0].tolist()
+        for p in pred:
+            if p != 0:
+                res.append(
+                    {
+                        'title': title[i],
+                        'h_idx': h_idx[i],
+                        't_idx': t_idx[i],
+                        'r': p,
+                    }
+                )
+    res.sort(key=lambda x:(x['title'], x['h_idx'], x['t_idx'], x['r']))
+    submission_answer = [res[0]]
+    for i in range(1, len(res)):
+        x = res[i]
+        y = res[i - 1]
+        if (x['title'], x['h_idx'], x['t_idx'], x['r']) != (y['title'], y['h_idx'], y['t_idx'], y['r']):
+            submission_answer.append(res[i])
+    golds = np.concatenate(golds, axis=0).astype(np.int32)
+    gold_res = []
+    for i in range(golds.shape[0]):
+        gold = golds[i]
+        gold = np.nonzero(gold)[0].tolist()
+        for p in gold:
+            if p != 0:
+                gold_res.append(
+                    {
+                        'title': title[i],
+                        'h_idx': h_idx[i],
+                        't_idx': t_idx[i],
+                        'r': p,
+                    }
+                )
+    tot_relations = len(gold_res)
+    correct_re = 0
+    for i in res:
+        if i in gold_res:
+            correct_re += 1
+    re_p = 1.0 * correct_re / len(submission_answer)
+    re_r = 1.0 * correct_re / tot_relations
+    re_f1 = 2.0 * re_p * re_r / (re_p+re_r)
     output = {
-        "{}_p".format(tag): precision * 100,
-        "{}_r".format(tag): recall * 100,
-        "{}_f1".format(tag): f1 * 100,
-        # "{}_f1_intra".format(tag): f1_intra * 100,
-        # "{}_f1_inter".format(tag): f1_inter * 100,
+        "{}_p".format(tag): re_p * 100,
+        "{}_r".format(tag): re_r * 100,
+        "{}_f1".format(tag): re_f1 * 100,
     }
     return f1, output
-    # return index
 
 
 def humanized_time(second):
