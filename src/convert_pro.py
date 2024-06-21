@@ -5,7 +5,6 @@ import numpy as np
 from adj_utils import sparse_mxs_to_torch_sparse_tensor
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 import scipy.sparse as sp
-# from subGraph import preprocess_data
 
 
 docred_rel2id = json.load(open('meta/rel2id.json', 'r'))
@@ -80,10 +79,6 @@ def read_docred_con(file_in, tokenizer, max_seq_length=1024):
         train_triple = {}
         if "labels" in sample:
             for label in sample['labels']:
-                #evidence = label['evidence']
-                #r = int(docred_rel2id[label['r']])
-                #r = int(cdr_rel2id_rel2id[label['r']])
-                #r = int(cdr_rel2id[label['r']])
                 r = label['r']
                 dist = label['dist']
                 if (label['h'], label['t']) not in train_triple:
@@ -98,28 +93,22 @@ def read_docred_con(file_in, tokenizer, max_seq_length=1024):
         for e_id, e in enumerate(entities):
             entity_pos.append([])
             for m in e:
-                # start = sent_map[m["sent_id"]][m["pos"][0]]
-                # end = sent_map[m["sent_id"]][m["pos"][1]]
                 start = sent_map[m["pos"][0]]
                 end = sent_map[m["pos"][1]]
                 s_id = m["sent_id"]
 
-                # entity_pos[-1].append((start, end,))
-                # entity_pos[-1].append((start, end, e_id, h_lid, t_lid, s_id))
                 entity_pos[-1].append((start, end, e_id, s_id, men_id, men_id+ent_num))
                 men_id += 1
 
         entity_node = []
         mention_node = []
         for idx in range(len(entity_pos)):
-            # entity_node += [[idx, idx, idx, idx, idx, idx, 0]]
             entity_node += [[idx, idx, idx, idx, idx, idx, 0]]
             for item in entity_pos[idx]:
                 mention_node += [list(item) + [1]]
 
         nodes = entity_node + mention_node + sentl_node
         nodes = np.array(nodes)
-        # xv, yv = np.meshgrid(np.arange(nodes.shape[0]), np.arange(nodes.shape[0]), indexing='ij')
 
         xv, yv = np.meshgrid(np.arange(nodes.shape[0]), np.arange(nodes.shape[0]), indexing='ij')
         l_type, r_type = nodes[xv, 6], nodes[yv, 6]
@@ -146,95 +135,6 @@ def read_docred_con(file_in, tokenizer, max_seq_length=1024):
 
         # adjacency = sparse_mxs_to_torch_sparse_tensor([sp.coo_matrix(adjacency[i]) for i in range(5)])
         adjacency = sparse_mxs_to_torch_sparse_tensor([sp.coo_matrix(adjacency[i]) for i in range(4)])
-
-        #path分为：e-m-s-m-e; e-m-s-s-m-e; e-m-s-m-e-m-s-m-e
-        # new_ent_id = []
-        # new_men_id = []
-        # new_sen_id = []
-        # for i in range(len(doc_path)):
-        #     if len(doc_path[i]) == 5:
-        #         new_ent_id.append(doc_path[i][0])
-        #         new_ent_id.append(doc_path[i][-1])
-        #         new_men_id.append(doc_path[i][1])
-        #         new_men_id.append(doc_path[i][-2])
-        #         new_sen_id.append(doc_path[i][2])
-        #     elif len(doc_path[i]) == 6:
-        #
-        #         new_ent_id.append(doc_path[i][0])
-        #         new_ent_id.append(doc_path[i][-1])
-        #         new_men_id.append(doc_path[i][1])
-        #         new_men_id.append(doc_path[i][-2])
-        #         new_sen_id.append(doc_path[i][2])
-        #         new_sen_id.append(doc_path[i][3])
-        #     elif len(doc_path[i]) == 9:
-        #         new_ent_id.append(doc_path[i][0])
-        #         new_ent_id.append(doc_path[i][4])
-        #         new_ent_id.append(doc_path[i][-1])
-        #         new_men_id.append(doc_path[i][1])
-        #         new_men_id.append(doc_path[i][3])
-        #         new_men_id.append(doc_path[i][5])
-        #         new_men_id.append(doc_path[i][7])
-        #         new_sen_id.append(doc_path[i][2])
-        #         new_sen_id.append(doc_path[i][6])
-        #     elif len(doc_path[i]) == 13:
-        #         new_ent_id.append(doc_path[i][0])
-        #         new_ent_id.append(doc_path[i][4])
-        #         new_ent_id.append(doc_path[i][8])
-        #         new_ent_id.append(doc_path[i][12])
-        #         new_men_id.append(doc_path[i][1])
-        #         new_men_id.append(doc_path[i][3])
-        #         new_men_id.append(doc_path[i][5])
-        #         new_men_id.append(doc_path[i][7])
-        #         new_men_id.append(doc_path[i][9])
-        #         new_men_id.append(doc_path[i][11])
-        #         new_sen_id.append(doc_path[i][2])
-        #         new_sen_id.append(doc_path[i][6])
-        #         new_sen_id.append(doc_path[i][10])
-        #
-        #
-        # new_ent_id = list(set(new_ent_id))
-        # new_men_id = list(set(new_men_id))
-        # new_sen_id = list(set(new_sen_id))
-        # new_ent_id.sort()
-        # new_men_id.sort()
-        # new_sen_id.sort()
-        # new_ent_node = [node for node in entity_node if node[0] in new_ent_id]
-        # new_men_node = [node for node in mention_node if node[4] in new_men_id]
-        # new_sen_node = [node for node in sentl_node if node[0] in new_sen_id]
-        #
-        # #子图构建
-        # new_nodes = new_ent_node + new_men_node + new_sen_node
-        # if len(new_nodes) == 0:
-        #   new_nodes = nodes
-        # new_nodes = np.array(new_nodes)
-        # #print(new_nodes.shape)
-        # new_xv, new_yv = np.meshgrid(np.arange(new_nodes.shape[0]), np.arange(new_nodes.shape[0]), indexing='ij')
-        # new_l_type, new_r_type = new_nodes[new_xv, 6], new_nodes[new_yv, 6]
-        # new_l_eid, new_r_eid = new_nodes[new_xv, 2], new_nodes[new_yv, 2]
-        # new_l_sid, new_r_sid = new_nodes[new_xv, 3], new_nodes[new_yv, 3]
-        #
-        # new_adj_temp = np.full((new_l_type.shape[0], new_r_type.shape[0]), 0,'i')  # adj_temp是一个临时的邻接矩阵，用来存储边的情况，
-        #
-        # new_adjacency = np.full((4, new_l_type.shape[0], new_r_type.shape[0]), 0.0)
-        # new_adj_temp = np.where((new_l_type == 1) & (new_r_type == 1) & (new_l_sid == new_r_sid), 1, new_adj_temp)
-        # new_adjacency[0] = np.where((new_l_type == 1) & (new_r_type == 1) & (new_l_sid == new_r_sid), 1, new_adjacency[0])
-        # new_adj_temp = np.where((new_l_type == 0) & (new_r_type == 1) & (new_l_eid == new_r_eid), 1, new_adj_temp)
-        # new_adj_temp = np.where((new_l_type == 1) & (new_r_type == 0) & (new_l_eid == new_r_eid), 1, new_adj_temp)
-        # new_adjacency[1] = np.where((new_l_type == 0) & (new_r_type == 1) & (new_l_eid == new_r_eid), 1, new_adjacency[1])
-        # new_adjacency[1] = np.where((new_l_type == 1) & (new_r_type == 0) & (new_l_eid == new_r_eid), 1, new_adjacency[1])
-        #
-        # new_adj_temp = np.where((new_l_type == 1) & (new_r_type == 2) & (new_l_sid == new_r_sid), 1, new_adj_temp)
-        # new_adj_temp = np.where((new_l_type == 2) & (new_r_type == 1) & (new_l_sid == new_r_sid), 1, new_adj_temp)
-        # new_adjacency[2] = np.where((new_l_type == 1) & (new_r_type == 2) & (new_l_sid == new_r_sid), 1, new_adjacency[2])
-        # new_adjacency[2] = np.where((new_l_type == 2) & (new_r_type == 1) & (new_l_sid == new_r_sid), 1, new_adjacency[2])
-        #
-        # # adj_temp = np.where((l_type == 2) & (r_type == 2), 1, adj_temp)
-        # # adjacency[3] = np.where((l_type == 2) & (r_type == 2), 1, adjacency[3])
-        #
-        # new_adj_temp = np.where((new_l_type == 2) & (new_r_type == 2) & (new_l_sid + 1 == new_r_sid), 1, new_adj_temp)
-        # new_adjacency[3] = np.where((new_l_type == 2) & (new_r_type == 2) & (new_l_sid + 1 == new_r_sid), 1, new_adjacency[3])
-        #
-        # new_adjacency = sparse_mxs_to_torch_sparse_tensor([sp.coo_matrix(new_adjacency[i]) for i in range(4)])
 
 
         relations, hts, dists = [], [], []
@@ -273,8 +173,6 @@ def read_docred_con(file_in, tokenizer, max_seq_length=1024):
                        'adjacency': adjacency,
                        'link_pos': sentl_pos,
                        'nodes_info': nodes,
-                       # 'sub_nodes': new_nodes,
-                       # 'sub_adjacency': new_adjacency,
                        }
             features.append(feature)
         #print("hts:", len(feature['hts']))
