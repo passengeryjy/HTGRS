@@ -89,7 +89,7 @@ python run_*.py
 python run_*.py
 ```
 ## Contact
-- if you have any further questions about KEIPA, please feel free to contact us [jianyuany@dlmu.edu.cn]
+- if you have any further questions about HTGRS, please feel free to contact us [jianyuany@dlmu.edu.cn]
 
 ## Acknowledgement
 
