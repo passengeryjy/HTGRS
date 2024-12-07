@@ -88,6 +88,8 @@ python run_*.py
 ```Python
 python run_*.py
 ```
+## Contact
+- if you have any further questions about KEIPA, please feel free to contact us [jianyuany@dlmu.edu.cn]
 
 ## Acknowledgement
 
